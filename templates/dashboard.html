@@ -1,0 +1,395 @@
+﻿<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MindEase AI Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+    darkMode: "class",
+    theme: {
+        extend: {
+            colors: {
+                "primary": "#e3f0fd",
+                "background-light": "#f6f7f8",
+                "background-dark": "#101922",
+                "pastel-green": "#e8f5e9",
+                "soft-lavender": "#f3e5f5",
+                "brand-blue": "#4b739b",
+            },
+            fontFamily: {
+                "display": ["Inter", "sans-serif"]
+            },
+            animation: {
+                "breathing-glow": "breathing 10s ease-in-out infinite",
+                "float": "float 6s ease-in-out infinite",
+                "pulse-slow": "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+            keyframes: {
+                breathing: {
+                    "0%, 100%": { filter: "drop-shadow(0 0 2px rgba(75, 115, 155, 0.2))", transform: "scale(1)" },
+                    "50%": { filter: "drop-shadow(0 0 15px rgba(75, 115, 155, 0.4))", transform: "scale(1.05)" },
+                },
+                float: {
+                    "0%, 100%": { transform: "translateY(0)" },
+                    "50%": { transform: "translateY(-10px)" },
+                }
+            }
+        },
+    },
+}
+</script>
+<style>
+    body { font-family: "Inter", sans-serif; }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .message-bubble-ai {
+        background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+        box-shadow: 0 4px 15px -3px rgba(0,0,0,0.05);
+    }
+    .message-bubble-user {
+        background: linear-gradient(135deg, #e3f0fd 0%, #d1e9ff 100%);
+        box-shadow: 0 4px 15px -3px rgba(75, 115, 155, 0.1);
+    }
+    .sidebar-item-active {
+        background: #e3f0fd;
+        color: #0d141c;
+    }
+    .hover-lift {
+        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+    #pageLoader {
+        position: fixed;
+        inset: 0;
+        background: rgba(246, 247, 248, 0.85);
+        backdrop-filter: blur(6px);
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+    }
+    #pageLoader.active { display: flex; }
+    .loader-ring {
+        width: 52px;
+        height: 52px;
+        border: 4px solid rgba(75, 115, 155, 0.22);
+        border-top-color: #4b739b;
+        border-radius: 9999px;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+        *, ::before, ::after {
+            animation-delay: -1ms !important;
+            animation-duration: 1ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+        }
+    }
+</style>
+</head>
+<body class="bg-background-light text-slate-900 font-display selection:bg-brand-blue/20">
+<div id="pageLoader" aria-live="polite" aria-busy="true">
+    <div class="loader-ring"></div>
+    <p id="loaderText" class="text-sm font-semibold text-slate-700">Loading...</p>
+</div>
+<div class="flex h-screen overflow-hidden">
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col z-20">
+        <div class="p-8 flex flex-col h-full">
+            <div class="flex items-center gap-3 mb-12 animate-breathing-glow">
+                <div class="w-10 h-10 bg-brand-blue rounded-xl flex items-center justify-center text-white">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 3c2 2.5 4 4.8 7 6.3-1.2 5-4.5 8.8-7 10.4-2.5-1.6-5.8-5.4-7-10.4C8 7.8 10 5.5 12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-800">MindEase</h1>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-primary/20 mb-8">
+                <p class="text-xs text-brand-blue font-semibold uppercase tracking-wider">Welcome back</p>
+                <p class="text-lg font-bold text-slate-800">{{ user_name }}</p>
+            </div>
+
+            <nav class="flex-1 space-y-2">
+                <a class="js-tab-link {% if active_page == 'chat' %}sidebar-item-active{% else %}text-slate-500 hover:bg-slate-50{% endif %} flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all group" href="{{ url_for('dashboard') }}">
+                    <svg class="w-5 h-5 {% if active_page == 'chat' %}text-slate-700{% else %}text-slate-400 group-hover:text-brand-blue{% endif %}" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-5l-5 5v-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Chat</span>
+                    {% if active_page == 'chat' %}<div class="ml-auto w-2 h-2 rounded-full bg-brand-blue"></div>{% endif %}
+                </a>
+                <a class="js-tab-link {% if active_page == 'video' %}sidebar-item-active{% else %}text-slate-500 hover:bg-slate-50{% endif %} flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all group" href="{{ url_for('video_call') }}">
+                    <svg class="w-5 h-5 {% if active_page == 'video' %}text-slate-700{% else %}text-slate-400 group-hover:text-brand-blue{% endif %}" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M15 10l4.6-2.3A1 1 0 0 1 21 8.6v6.8a1 1 0 0 1-1.4.9L15 14m-10 4h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Video Call</span>
+                    {% if active_page == 'video' %}<div class="ml-auto w-2 h-2 rounded-full bg-brand-blue"></div>{% endif %}
+                </a>
+                <a class="js-tab-link {% if active_page == 'recommendation' %}sidebar-item-active{% else %}text-slate-500 hover:bg-slate-50{% endif %} flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all group" href="{{ url_for('recommendation') }}">
+                    <svg class="w-5 h-5 {% if active_page == 'recommendation' %}text-slate-700{% else %}text-slate-400 group-hover:text-brand-blue{% endif %}" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Recommendation</span>
+                    {% if active_page == 'recommendation' %}<div class="ml-auto w-2 h-2 rounded-full bg-brand-blue"></div>{% endif %}
+                </a>
+            </nav>
+
+            <div class="mt-auto border-t border-slate-100 pt-6">
+                <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-3 w-full rounded-xl font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all group">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M17 16l4-4m0 0-4-4m4 4H9m4 8H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative bg-background-light overflow-hidden">
+        {% if active_page == 'chat' %}
+        <section class="flex-1 flex flex-col h-full" id="chat-section">
+            <header class="h-20 px-8 flex items-center justify-between border-b border-slate-200/60 bg-white/50 backdrop-blur-md sticky top-0 z-10">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">AI Chat Support</h2>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span class="text-xs font-medium text-slate-500 uppercase tracking-wide">Online &amp; Ready</span>
+                    </div>
+                </div>
+                <button id="endChatBtn" class="bg-primary hover:bg-brand-blue hover:text-white transition-colors px-4 py-2 rounded-lg text-sm font-semibold text-brand-blue">
+                    End Chat
+                </button>
+            </header>
+
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-8 space-y-8 flex flex-col">
+                <div class="flex items-end gap-3 max-w-[80%]">
+                    <div class="w-10 h-10 rounded-full bg-soft-lavender flex items-center justify-center shrink-0 shadow-sm border border-white">
+                        <svg class="w-5 h-5 text-brand-blue" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M9.5 12a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm5 0a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM6 19a3.5 3.5 0 0 1 7 0m1 0a3.5 3.5 0 0 1 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[11px] font-bold text-slate-400 ml-2 uppercase tracking-tight">MindEase AI</span>
+                        <div class="message-bubble-ai px-5 py-4 rounded-2xl rounded-bl-none text-slate-700 leading-relaxed border border-white/50">
+                            Hello {{ user_name }}, I am here to support you. What is on your mind today?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-8 pt-2">
+                <form id="chatForm" class="max-w-4xl mx-auto relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-primary to-soft-lavender rounded-2xl blur opacity-20 group-focus-within:opacity-100 transition duration-1000 group-focus-within:duration-200"></div>
+                    <div class="relative glass-card flex items-center gap-4 p-2 rounded-2xl shadow-xl border border-white/80">
+                        <button type="button" class="p-3 text-slate-400 hover:text-brand-blue transition-colors" disabled>
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </button>
+                        <input id="chatInput" class="flex-1 bg-transparent border-none focus:ring-0 text-slate-800 placeholder:text-slate-400 py-4 text-base" placeholder="Type your message here..." type="text" autocomplete="off" required/>
+                        <div class="flex items-center gap-2 pr-2">
+                            <button type="button" class="p-3 text-slate-400 hover:text-brand-blue transition-colors" disabled>
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm0 0v0M19 11a7 7 0 1 1-14 0m7 7v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                            </button>
+                            <button type="submit" class="bg-brand-blue text-white w-12 h-12 flex items-center justify-center rounded-xl shadow-lg shadow-brand-blue/30 hover:shadow-brand-blue/40 transition-all active:scale-95">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M3 11.5l18-8-8 18-1.8-7.2L3 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <p class="text-center text-[10px] text-slate-400 mt-4 uppercase tracking-[0.2em] font-bold">MindEase is an AI assistant and does not replace professional medical advice.</p>
+            </div>
+        </section>
+        {% elif active_page == 'video' %}
+        <section class="flex-1 p-10 overflow-y-auto">
+            <div class="max-w-4xl mx-auto">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight mb-2">Video Counseling</h2>
+                    <p class="text-slate-500">Use the same supportive space with face-to-face AI guidance.</p>
+                </header>
+                <div class="glass-card rounded-3xl p-10 border border-white shadow-sm flex flex-col items-center text-center">
+                    <div class="w-44 h-44 rounded-full bg-gradient-to-tr from-brand-blue/25 via-soft-lavender/25 to-primary/40 flex items-center justify-center animate-float mb-6">
+                        <svg class="w-20 h-20 text-brand-blue" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M15 10l4.6-2.3A1 1 0 0 1 21 8.6v6.8a1 1 0 0 1-1.4.9L15 14m-10 4h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-800 mb-2">Video Session Ready</h3>
+                    <p class="text-slate-600 max-w-xl mb-8">This module is connected to your dashboard flow. You can integrate your preferred WebRTC provider here while keeping the same UI shell.</p>
+                    <a href="{{ url_for('dashboard') }}" class="js-tab-link px-8 py-3 bg-brand-blue text-white rounded-xl font-semibold hover:bg-slate-700 transition-colors">Back to Chat</a>
+                </div>
+            </div>
+        </section>
+        {% else %}
+        <section class="flex-1 p-10 overflow-y-auto">
+            <div class="max-w-5xl mx-auto">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight mb-2">Personalized Recommendation</h2>
+                    <p class="text-slate-500">Guidance generated from your conversation history.</p>
+                </header>
+                <div class="glass-card rounded-3xl p-8 border border-white shadow-sm">
+                    <p id="recommendationText" class="text-slate-700 leading-relaxed whitespace-pre-line">Loading your recommendation...</p>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+    </main>
+</div>
+
+<script>
+const activePage = "{{ active_page }}";
+const pageLoader = document.getElementById("pageLoader");
+const loaderText = document.getElementById("loaderText");
+
+function showLoader(message) {
+    if (loaderText) loaderText.textContent = message || "Loading...";
+    if (pageLoader) pageLoader.classList.add("active");
+    console.log(`[ui-loader] SHOW -> ${message || "Loading..."}`);
+}
+
+function bindTabLoader() {
+    const tabLinks = document.querySelectorAll(".js-tab-link");
+    tabLinks.forEach((link) => {
+        link.addEventListener("click", () => {
+            const label = (link.textContent || "tab").trim();
+            console.log(`[ui-loader] tab click -> ${label}`);
+            showLoader(`Switching to ${label}...`);
+        });
+    });
+}
+
+bindTabLoader();
+
+if (activePage === "chat") {
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const chatMessages = document.getElementById("chatMessages");
+    const endChatBtn = document.getElementById("endChatBtn");
+
+    function addMessage(text, sender) {
+        const row = document.createElement("div");
+        row.className = sender === "user"
+            ? "flex items-end gap-3 max-w-[80%] ml-auto flex-row-reverse"
+            : "flex items-end gap-3 max-w-[80%]";
+
+        const avatar = document.createElement("div");
+        avatar.className = sender === "user"
+            ? "w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-sm border border-white"
+            : "w-10 h-10 rounded-full bg-soft-lavender flex items-center justify-center shrink-0 shadow-sm border border-white";
+        avatar.innerHTML = sender === "user"
+            ? '<svg class="w-5 h-5 text-brand-blue" viewBox="0 0 24 24" fill="none"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.3 0-6 2.2-6 5h12c0-2.8-2.7-5-6-5Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+            : '<svg class="w-5 h-5 text-brand-blue" viewBox="0 0 24 24" fill="none"><path d="M9.5 12a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Zm5 0a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5ZM6 19a3.5 3.5 0 0 1 7 0m1 0a3.5 3.5 0 0 1 7 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+        const wrap = document.createElement("div");
+        wrap.className = sender === "user" ? "flex flex-col gap-1 items-end" : "flex flex-col gap-1";
+
+        const tag = document.createElement("span");
+        tag.className = sender === "user"
+            ? "text-[11px] font-bold text-slate-400 mr-2 uppercase tracking-tight"
+            : "text-[11px] font-bold text-slate-400 ml-2 uppercase tracking-tight";
+        tag.textContent = sender === "user" ? "You" : "MindEase AI";
+
+        const bubble = document.createElement("div");
+        bubble.className = sender === "user"
+            ? "message-bubble-user px-5 py-4 rounded-2xl rounded-br-none text-slate-800 leading-relaxed border border-white/50"
+            : "message-bubble-ai px-5 py-4 rounded-2xl rounded-bl-none text-slate-700 leading-relaxed border border-white/50";
+        bubble.textContent = text;
+
+        wrap.appendChild(tag);
+        wrap.appendChild(bubble);
+        row.appendChild(avatar);
+        row.appendChild(wrap);
+        chatMessages.appendChild(row);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return bubble;
+    }
+
+    async function sendMessage(message) {
+        const res = await fetch("{{ url_for('get_response') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_input: message })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || "Failed to get response.");
+        }
+        return data.response;
+    }
+
+    chatForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        addMessage(message, "user");
+        chatInput.value = "";
+        const pendingBubble = addMessage("Thinking...", "ai");
+
+        try {
+            const reply = await sendMessage(message);
+            if (pendingBubble && pendingBubble.textContent === "Thinking...") {
+                pendingBubble.textContent = reply;
+            } else {
+                addMessage(reply, "ai");
+            }
+        } catch (error) {
+            if (pendingBubble && pendingBubble.textContent === "Thinking...") {
+                pendingBubble.textContent = "Unable to respond right now. Please try again.";
+            } else {
+                addMessage("Unable to respond right now. Please try again.", "ai");
+            }
+        }
+    });
+
+    endChatBtn.addEventListener("click", async () => {
+        try {
+            console.log("[end_chat] Clicked end chat.");
+            showLoader("Ending chat and preparing recommendation...");
+            const res = await fetch("{{ url_for('end_chat') }}", { method: "POST" });
+            const data = await res.json();
+            if (!res.ok) {
+                console.log("[end_chat] API error:", data);
+                throw new Error(data.error || "Unable to end chat.");
+            }
+            console.log("[end_chat] Success:", data);
+            const redirectUrl = data.redirect_url || "{{ url_for('recommendation') }}";
+            window.location.href = redirectUrl;
+        } catch (error) {
+            console.log("[end_chat] Exception:", error);
+            if (pageLoader) pageLoader.classList.remove("active");
+            addMessage("Unable to end chat right now.", "ai");
+        }
+    });
+}
+
+if (activePage === "recommendation") {
+    const recommendationText = document.getElementById("recommendationText");
+    async function loadRecommendation() {
+        try {
+            const res = await fetch("{{ url_for('get_recommendation') }}");
+            const text = await res.text();
+            recommendationText.textContent = text || "No recommendation available yet.";
+        } catch (error) {
+            recommendationText.textContent = "Could not load recommendation right now.";
+        }
+    }
+    loadRecommendation();
+}
+</script>
+</body>
+</html>
+

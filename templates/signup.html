@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sign Up | MindEase AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+    darkMode: "class",
+    theme: {
+        extend: {
+            colors: {
+                primary: "#4A90E2",
+                "background-light": "#f8f6f6",
+                "background-dark": "#221610"
+            },
+            fontFamily: {
+                display: ["Public Sans", "sans-serif"]
+            }
+        }
+    }
+}
+</script>
+<style>
+    @keyframes float-blob {
+        0% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(30px, -50px) scale(1.1); }
+        66% { transform: translate(-20px, 20px) scale(0.9); }
+        100% { transform: translate(0, 0) scale(1); }
+    }
+    .animate-blob { animation: float-blob 20s infinite alternate ease-in-out; }
+    .delay-2000 { animation-delay: 2s; }
+    .delay-4000 { animation-delay: 4s; }
+
+    @keyframes fade-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-entrance { animation: fade-up .8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    @keyframes float-card {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    .animate-card-float { animation: float-card 6s ease-in-out infinite; }
+
+    .glass-panel {
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .dark .glass-panel {
+        background: rgba(34, 22, 16, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .signup-scroll {
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(74, 144, 226, 0.7) rgba(74, 144, 226, 0.12);
+    }
+    .signup-scroll::-webkit-scrollbar { width: 10px; }
+    .signup-scroll::-webkit-scrollbar-track {
+        background: rgba(74, 144, 226, 0.1);
+        border-radius: 999px;
+    }
+    .signup-scroll::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(74, 144, 226, 0.9), rgba(179, 157, 219, 0.9));
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+</style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark min-h-screen relative overflow-hidden text-slate-900 dark:text-slate-100">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 space-y-2">
+    {% for category, message in messages %}
+    <div class="rounded-lg px-4 py-3 text-sm font-semibold {% if category == 'success' %}bg-green-600 text-white{% elif category == 'error' %}bg-red-600 text-white{% else %}bg-blue-600 text-white{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+<div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-[#4A90E2]/25 rounded-full blur-[100px] animate-blob"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#B39DDB]/20 rounded-full blur-[120px] animate-blob delay-2000"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#4A90E2]/15 rounded-full blur-[80px] animate-blob delay-4000"></div>
+</div>
+
+<header class="fixed top-0 inset-x-0 z-20 bg-white/30 backdrop-blur-md border-b border-blue-200/50">
+    <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <svg class="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 3h6a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2h2Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 7h6M9 11h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <h1 class="text-xl font-bold tracking-tight">MindEase AI</h1>
+        </div>
+        <a class="text-sm font-semibold text-primary hover:underline" href="{{ url_for('login') }}">Already have an account? Log in</a>
+    </div>
+</header>
+
+<main class="relative z-10 min-h-screen pt-24 pb-8 px-4 flex items-center justify-center">
+    <section class="w-full max-w-3xl glass-panel rounded-2xl shadow-2xl animate-entrance animate-card-float">
+        <div class="px-6 md:px-10 pt-8 text-center">
+            <h2 class="text-3xl font-bold">Create Your Account</h2>
+            <p class="text-slate-600 mt-2">Start your journey to mental well-being with personalized AI support.</p>
+        </div>
+
+        <div class="signup-scroll px-6 md:px-10 py-6 max-h-[70vh] overflow-y-auto">
+            <form id="signupForm" action="{{ url_for('signup') }}" method="POST" class="space-y-5">
+                <input id="fullname" name="fullname" type="hidden"/>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="first_name">First Name</label>
+                        <input id="first_name" name="first_name" type="text" required placeholder="e.g. Jane" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="last_name">Last Name</label>
+                        <input id="last_name" name="last_name" type="text" required placeholder="e.g. Doe" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="age">Age</label>
+                        <input id="age" name="age" type="number" min="1" required placeholder="e.g. 25" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="gender">Gender</label>
+                        <select id="gender" name="gender" required class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none">
+                            <option disabled selected value="">Select Gender</option>
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="non-binary">Non-binary</option>
+                            <option value="prefer-not-to-say">Prefer not to say</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" for="mobile">Phone Number</label>
+                    <input id="mobile" name="mobile" type="tel" required placeholder="+1 (555) 000-0000" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" for="userid">User ID</label>
+                    <input id="userid" name="userid" type="text" required pattern="[A-Za-z0-9_.-]{3,32}" title="Use 3 to 32 characters: letters, numbers, underscore, dot, or hyphen." placeholder="e.g. jane_doe21" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-1.5" for="email">Email Address</label>
+                    <input id="email" name="email" type="email" required placeholder="jane@example.com" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="password">Password</label>
+                        <input id="password" name="password" type="password" required placeholder="********" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5" for="confirm-password">Confirm Password</label>
+                        <input id="confirm-password" name="confirm-password" type="password" required placeholder="********" class="w-full h-12 px-4 rounded-lg border border-slate-300 bg-white/60 focus:border-primary focus:ring-2 focus:ring-blue-200 outline-none"/>
+                    </div>
+                </div>
+
+                <button id="createAccountBtn" type="submit" class="w-full mt-2 bg-primary text-white font-bold py-3.5 rounded-lg shadow-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2">
+                    Create Account
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+
+                <p class="text-center text-xs text-slate-500">
+                    By clicking "Create Account", you agree to our policies.
+                </p>
+
+                <div class="relative my-2">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-300/70"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs uppercase">
+                        <span class="bg-white/70 px-2 text-slate-500">Or continue with</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button type="button" class="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-lg bg-white/60 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path></svg>
+                        Google
+                    </button>
+                    <button type="button" class="flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-lg bg-white/60 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"></path></svg>
+                        GitHub
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+
+<script>
+document.getElementById("signupForm").addEventListener("submit", function () {
+    const first = document.getElementById("first_name").value.trim();
+    const last = document.getElementById("last_name").value.trim();
+    const submitBtn = document.getElementById("createAccountBtn");
+
+    document.getElementById("fullname").value = `${first} ${last}`.trim();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating account...";
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+Flask>=2.3
+python-dotenv>=1.0
+langchain>=0.2.7
+langchain-groq>=0.1.9
+numpy>=1.24
+pandas>=2.0
+requests>=2.31
+
+# Optional heavy/local-only ML dependencies (not required on Vercel)
+# faiss-cpu>=1.7.4
+# sentence-transformers>=2.2
+# torch>=2.0
+# transformers>=4.36
+# joblib>=1.3

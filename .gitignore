@@ -1,0 +1,45 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# IDE/editor
+.vscode/
+.idea/
+.vercel/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local databases / runtime data
+*.db
+chat_logs/
+recommendations/
+
+# Model and data artifacts (large/generated)
+model/embeddings.npy
+model/logs/
+model/distilbert-text-classifier/
+*.ipynb_checkpoints
+
+# Optional local datasets
+dataset/

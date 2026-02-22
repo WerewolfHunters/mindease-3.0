@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Recommendations | MindEase{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div>
+            <div class="brand">MindEase</div>
+            <p class="sidebar-user">Personalized care suggestions</p>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">Counselor Chat</a>
+            <a href="{{ url_for('video_call') }}" class="nav-link">Video Call</a>
+            <a href="{{ url_for('recommendation') }}" class="nav-link active">Recommendations</a>
+        </nav>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline">Logout</a>
+    </aside>
+
+    <main class="main-panel centered-panel">
+        <section class="placeholder-card">
+            <h1>Recommendations</h1>
+            <p id="recommendationText">Loading your personalized recommendation...</p>
+        </section>
+    </main>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadRecommendation() {
+    const target = document.getElementById("recommendationText");
+    try {
+        const res = await fetch("{{ url_for('get_recommendation') }}");
+        const text = await res.text();
+        target.textContent = text || "No recommendation available yet.";
+    } catch (error) {
+        target.textContent = "Could not load recommendation right now.";
+    }
+}
+loadRecommendation();
+</script>
+{% endblock %}

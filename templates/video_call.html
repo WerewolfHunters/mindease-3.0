@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Video Call | MindEase{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+{% block content %}
+<div class="dashboard-layout">
+    <aside class="sidebar">
+        <div>
+            <div class="brand">MindEase</div>
+            <p class="sidebar-user">Hello, {{ user_name }}</p>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('dashboard') }}" class="nav-link">Counselor Chat</a>
+            <a href="{{ url_for('video_call') }}" class="nav-link active">Video Call</a>
+            <a href="{{ url_for('recommendation') }}" class="nav-link">Recommendations</a>
+        </nav>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline">Logout</a>
+    </aside>
+
+    <main class="main-panel centered-panel">
+        <section class="placeholder-card">
+            <h1>Video Counseling</h1>
+            <p>
+                This section is ready for your preferred video provider integration
+                (Agora, Daily, Twilio, WebRTC).
+            </p>
+            <a class="btn btn-primary" href="{{ url_for('dashboard') }}">Back to Chat</a>
+        </section>
+    </main>
+</div>
+{% endblock %}
