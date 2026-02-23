@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: mindease-3-0
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn api.index:app --bind 0.0.0.0:$PORT
