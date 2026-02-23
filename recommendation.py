@@ -9,6 +9,8 @@ class CounselorAI:
         # Load environment variables
         load_dotenv()
         self.api_key = os.getenv("CHAT_GROQ_API_KEY")
+        if not self.api_key:
+            raise ValueError("CHAT_GROQ_API_KEY is missing in environment variables.")
 
         # Initialize ChatGroq model
         self.chat_groq = ChatGroq(model_name=model_name, api_key=self.api_key)
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     chat_history_file = r"chat_logs/chat_history_2.txt"
 
     # Get AI recommendation
-    recommendation = counselor_ai.generate_recommendation(chat_history_file)
+    recommendation = counselor_ai.generate_recommendation(chat_history_file, user_id="2")
 
     # Print the recommendation
     print("AI Recommendation:\n", recommendation)

@@ -29,7 +29,8 @@ DATASET_GDRIVE_URL = os.getenv(
     f"https://drive.google.com/uc?export=download&id={DATASET_FILE_ID}"
 )
 IS_VERCEL = os.getenv("VERCEL") == "1"
-BASE_DATA_DIR = "/tmp" if IS_VERCEL else "."
+IS_RENDER = os.getenv("RENDER") == "true"
+BASE_DATA_DIR = "/tmp" if (IS_VERCEL or IS_RENDER) else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DATA_DIR, "users.db"))
 DATASET_CACHE_PATH = os.path.join(BASE_DATA_DIR, "model", "balanced_cleaned_data.csv")
 
@@ -94,6 +95,11 @@ os.environ["RECOMMENDATION_DIR"] = get_recommendation_dir()
 chatbot = None
 counselor_ai = None
 detector = MentalHealthMonitor(sender_email=sender_mail, sender_password=sender_pass)
+print(f"[startup] runtime={'vercel' if IS_VERCEL else 'render' if IS_RENDER else 'local'}")
+print(f"[startup] BASE_DATA_DIR={BASE_DATA_DIR}")
+print(f"[startup] DB_PATH={DB_PATH}")
+print(f"[startup] CHAT_DIR={get_chat_dir()}")
+print(f"[startup] REC_DIR={get_recommendation_dir()}")
 
 def get_chatbot():
     global chatbot
@@ -351,13 +357,16 @@ def get_recommendation():
     chat_file = get_chat_file(user_id)
     rec_file = get_recommendation_file(user_id)
 
+    print(f"[get_recommendation] user_id={user_id}, chat_file={chat_file}, rec_file={rec_file}")
+
     # If recommendation doesn't exist, generate it
     if not os.path.exists(rec_file):
         if os.path.exists(chat_file):
+            print(f"[get_recommendation] recommendation missing, generating for user_id={user_id}")
             get_counselor_ai().generate_recommendation(chat_file, user_id)
         else:
-            flash("No chat history found to generate recommendation.", "warning")
-            return render_template("recommendations.html", recommendation=None)
+            print(f"[get_recommendation] chat history missing for user_id={user_id}")
+            return ("No chat history found to generate recommendation.", 404)
 
     # Read the recommendation
     with open(rec_file, "r", encoding="utf-8") as file:
@@ -476,7 +485,10 @@ def get_response():
         return jsonify({"error": "No active session."}), 403
 
     try:
+        print(f"[get_response] request user_id={user_id}, input_len={len(user_input)}")
         ai_response = get_chatbot().chat(user_id, user_input)
+        chat_file = get_chat_file(user_id)
+        print(f"[get_response] response generated user_id={user_id}, chat_file_exists={os.path.exists(chat_file)}")
         if not ai_response:
             return jsonify({"response": "I am here with you. Could you share a little more?"})
         return jsonify({"response": str(ai_response)})
@@ -487,10 +499,7 @@ def get_response():
     except Exception as e:
         print(f"[get_response] Unexpected error for user_id={user_id}: {e}")
         traceback.print_exc()
-        # Return graceful message to UI while preserving 200 for frontend continuity.
-        return jsonify({
-            "response": "I am unable to answer right now. Please try again in a moment."
-        }), 200
+        return jsonify({"error": "I am unable to answer right now. Please try again in a moment."}), 500
 
 @app.route("/end_chat", methods=["POST"])
 def end_chat():
@@ -499,6 +508,7 @@ def end_chat():
         return jsonify({"error": "No active session found."}), 403
 
     try:
+        print(f"[end_chat] starting for user_id={user_id}")
         # Save latest file-based history snapshot.
         bot = get_chatbot()
         previous_chat_history = bot.load_chat_history(user_id)
@@ -508,6 +518,7 @@ def end_chat():
         # Run recommendation pipeline immediately after ending chat.
         chat_file = get_chat_file(user_id)
         if os.path.exists(chat_file):
+            print(f"[end_chat] chat history found for user_id={user_id}. Generating recommendation.")
             get_counselor_ai().generate_recommendation(chat_file, user_id)
         else:
             print(f"[end_chat] Chat history file not found for user_id={user_id}: {chat_file}")
