@@ -34,6 +34,35 @@ BASE_DATA_DIR = "/tmp" if (IS_VERCEL or IS_RENDER) else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DATA_DIR, "users.db"))
 DATASET_CACHE_PATH = os.path.join(BASE_DATA_DIR, "model", "balanced_cleaned_data.csv")
 
+STRONG_RISK_PATTERNS = [
+    r"\bi\s*(want|wanna)\s*to\s*die\b",
+    r"\bi\s*(do\s*not|don't|dont)\s*want\s*to\s*live\b",
+    r"\bi\s*(can't|cant)\s*go\s*on\b",
+    r"\bkill\s*myself\b",
+    r"\bend\s*my\s*life\b",
+    r"\btake\s*my\s*own\s*life\b",
+    r"\bno\s*reason\s*to\s*live\b",
+    r"\bsuicid(e|al)\b",
+    r"\bself\s*harm\b",
+    r"\bharm\s*myself\b",
+    r"\boverdos(e|ing)\b",
+    r"\bhang\s*myself\b",
+    r"\bjump\s*off\b"
+]
+
+MEDIUM_RISK_PATTERNS = [
+    r"\bhopeless\b",
+    r"\bworthless\b",
+    r"\bempty\b",
+    r"\balone\b",
+    r"\bdepressed\b",
+    r"\blife\s*is\s*pointless\b",
+    r"\bgive\s*up\b",
+    r"\bwant\s*to\s*disappear\b",
+    r"\bbetter\s*off\s*dead\b",
+    r"\bnot\s*worth\s*living\b"
+]
+
 def get_chat_dir():
     return os.path.join(BASE_DATA_DIR, "chat_logs")
 
@@ -159,18 +188,9 @@ def extract_user_messages(chat_file: str):
 
 def keyword_based_suicide_labels(chat_file: str):
     """
-    Lightweight fallback detector used when FAISS-based classifier cannot run.
+    Regex + keyword fallback detector used when FAISS-based classifier cannot run.
     Returns label_counts compatible with existing detector.evaluate_and_notify().
     """
-    strong_keywords = [
-        "suicide", "kill myself", "end my life", "want to die", "die", "self harm",
-        "harm myself", "can't go on", "no reason to live", "end it all"
-    ]
-    medium_keywords = [
-        "hopeless", "worthless", "empty", "alone", "depressed", "life is pointless",
-        "tired of life", "give up"
-    ]
-
     user_msgs = extract_user_messages(chat_file)
     if not user_msgs:
         return {"normal": 1}
@@ -178,16 +198,25 @@ def keyword_based_suicide_labels(chat_file: str):
     suicide_hits = 0
     total = len(user_msgs)
 
-    for msg in user_msgs:
-        text = msg.lower()
-        strong_hit = any(k in text for k in strong_keywords)
-        medium_hit_count = sum(1 for k in medium_keywords if k in text)
+    for idx, msg in enumerate(user_msgs, start=1):
+        text = re.sub(r"\s+", " ", msg.lower()).strip()
+        strong_matches = [p for p in STRONG_RISK_PATTERNS if re.search(p, text)]
+        medium_matches = [p for p in MEDIUM_RISK_PATTERNS if re.search(p, text)]
 
-        # Strong hit OR multiple medium markers counts as a suicide-risk message.
-        if strong_hit or medium_hit_count >= 2:
+        if strong_matches or len(medium_matches) >= 2:
             suicide_hits += 1
+            print(
+                f"[suicide_fallback] risk message idx={idx}, "
+                f"strong_matches={len(strong_matches)}, medium_matches={len(medium_matches)}"
+            )
+        else:
+            print(
+                f"[suicide_fallback] normal message idx={idx}, "
+                f"strong_matches={len(strong_matches)}, medium_matches={len(medium_matches)}"
+            )
 
     normal_hits = max(total - suicide_hits, 0)
+    print(f"[suicide_fallback] label_counts={{'suicide': {suicide_hits}, 'normal': {normal_hits}}}")
     return {"suicide": suicide_hits, "normal": normal_hits}
 
 def analyze_suicide_and_notify(user_id: str):

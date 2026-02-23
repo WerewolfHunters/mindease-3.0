@@ -99,6 +99,21 @@ tailwind.config = {
             transition-delay: 0s !important;
         }
     }
+    .recommendation-markdown h1,
+    .recommendation-markdown h2,
+    .recommendation-markdown h3 { font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #0f172a; }
+    .recommendation-markdown p { margin: 0.55rem 0; line-height: 1.7; color: #334155; }
+    .recommendation-markdown ul,
+    .recommendation-markdown ol { margin: 0.75rem 0 0.75rem 1.25rem; color: #334155; }
+    .recommendation-markdown li { margin: 0.3rem 0; }
+    .recommendation-markdown strong { color: #1e293b; }
+    .recommendation-markdown code {
+        background: #eef2ff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.35rem;
+        padding: 0.1rem 0.3rem;
+        font-size: 0.9em;
+    }
 </style>
 </head>
 <body class="bg-background-light text-slate-900 font-display selection:bg-brand-blue/20">
@@ -241,7 +256,7 @@ tailwind.config = {
                     <p class="text-slate-500">Guidance generated from your conversation history.</p>
                 </header>
                 <div class="glass-card rounded-3xl p-8 border border-white shadow-sm">
-                    <p id="recommendationText" class="text-slate-700 leading-relaxed whitespace-pre-line">Loading your recommendation...</p>
+                    <div id="recommendationText" class="recommendation-markdown text-slate-700 leading-relaxed">Loading your recommendation...</div>
                 </div>
             </div>
         </section>
@@ -249,6 +264,8 @@ tailwind.config = {
     </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script>
 const activePage = "{{ active_page }}";
 const pageLoader = document.getElementById("pageLoader");
@@ -382,7 +399,13 @@ if (activePage === "recommendation") {
         try {
             const res = await fetch("{{ url_for('get_recommendation') }}");
             const text = await res.text();
-            recommendationText.textContent = text || "No recommendation available yet.";
+            const markdown = text || "No recommendation available yet.";
+            if (window.marked) {
+                const html = marked.parse(markdown, { gfm: true, breaks: true });
+                recommendationText.innerHTML = window.DOMPurify ? DOMPurify.sanitize(html) : html;
+            } else {
+                recommendationText.textContent = markdown;
+            }
         } catch (error) {
             recommendationText.textContent = "Could not load recommendation right now.";
         }
