@@ -9,6 +9,9 @@ import uuid  # <-- for generating unique session_id
 import os
 import traceback
 import re
+import requests
+
+load_dotenv()
 
 try:
     from RAGclassifier import RAGSimilarityClassifier
@@ -17,12 +20,18 @@ except Exception as import_error:
     print(f"[startup] RAG classifier import skipped: {import_error}")
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "change-me-in-production")
 embedding_path = './model/embeddings.npy'
-dataset_path = './model/balanced_cleaned_dataset.csv'
+FALLBACK_DATASET_PATH = './model/balanced_cleaned_dataset.csv'
+DATASET_FILE_ID = os.getenv("SUICIDE_DATASET_FILE_ID", "1XwfATug0EkZMYWNwqdalQdvWdUF7yJI6")
+DATASET_GDRIVE_URL = os.getenv(
+    "SUICIDE_DATASET_URL",
+    f"https://drive.google.com/uc?export=download&id={DATASET_FILE_ID}"
+)
 IS_VERCEL = os.getenv("VERCEL") == "1"
 BASE_DATA_DIR = "/tmp" if IS_VERCEL else "."
 DB_PATH = os.getenv("DB_PATH", os.path.join(BASE_DATA_DIR, "users.db"))
+DATASET_CACHE_PATH = os.path.join(BASE_DATA_DIR, "model", "balanced_cleaned_data.csv")
 
 def get_chat_dir():
     return os.path.join(BASE_DATA_DIR, "chat_logs")
@@ -36,16 +45,67 @@ def get_chat_file(user_id: str):
 def get_recommendation_file(user_id: str):
     return os.path.join(get_recommendation_dir(), f"chat_{user_id}.txt")
 
-load_dotenv()
+def _download_from_gdrive(file_url: str, destination: str):
+    session = requests.Session()
+    response = session.get(file_url, stream=True, timeout=120)
+    response.raise_for_status()
+
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith("download_warning"):
+            token = value
+            break
+
+    if token:
+        response = session.get(f"{file_url}&confirm={token}", stream=True, timeout=120)
+        response.raise_for_status()
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+
+def get_dataset_path():
+    """
+    Returns dataset path with Google Drive as primary source and local file as fallback.
+    """
+    os.makedirs(os.path.dirname(DATASET_CACHE_PATH), exist_ok=True)
+
+    if os.path.exists(DATASET_CACHE_PATH) and os.path.getsize(DATASET_CACHE_PATH) > 0:
+        return DATASET_CACHE_PATH
+
+    try:
+        print(f"[dataset] Downloading dataset from Google Drive -> {DATASET_CACHE_PATH}")
+        _download_from_gdrive(DATASET_GDRIVE_URL, DATASET_CACHE_PATH)
+        print(f"[dataset] Downloaded successfully: {DATASET_CACHE_PATH}")
+        return DATASET_CACHE_PATH
+    except Exception as e:
+        print(f"[dataset] Download failed: {e}")
+        if os.path.exists(FALLBACK_DATASET_PATH):
+            print(f"[dataset] Falling back to local dataset: {FALLBACK_DATASET_PATH}")
+            return FALLBACK_DATASET_PATH
+        return None
 
 sender_mail = os.getenv("MAIL")
 sender_pass = os.getenv("PASS")
 os.environ["RECOMMENDATION_DIR"] = get_recommendation_dir()
 
 
-chatbot = CounselorChatbot(chat_directory=get_chat_dir())
-counselor_ai = CounselorAI()
+chatbot = None
+counselor_ai = None
 detector = MentalHealthMonitor(sender_email=sender_mail, sender_password=sender_pass)
+
+def get_chatbot():
+    global chatbot
+    if chatbot is None:
+        chatbot = CounselorChatbot(chat_directory=get_chat_dir())
+    return chatbot
+
+def get_counselor_ai():
+    global counselor_ai
+    if counselor_ai is None:
+        counselor_ai = CounselorAI()
+    return counselor_ai
 
 # DB Initialization
 def init_db():
@@ -138,6 +198,9 @@ def analyze_suicide_and_notify(user_id: str):
         try:
             if RAGSimilarityClassifier is None:
                 raise RuntimeError("RAG classifier unavailable in this runtime.")
+            dataset_path = get_dataset_path()
+            if not dataset_path:
+                raise RuntimeError("Dataset unavailable from Google Drive and no local fallback found.")
             classifier = RAGSimilarityClassifier(dataset_path, embedding_path, filepath=chat_file)
             _, label_counts = classifier.predict_labels()
             print(f"[suicide_detector] Using RAG classifier for user_id={user_id}")
@@ -234,7 +297,6 @@ def mental_score():
         return redirect(url_for("login"))
 
     chat_file = get_chat_file(user_id)
-    dataset_path = './model/balanced_cleaned_dataset.csv'
     embedding_path = './model/embeddings.npy'
 
     if not os.path.exists(chat_file):
@@ -244,6 +306,9 @@ def mental_score():
     try:
         if RAGSimilarityClassifier is None:
             return jsonify({"error": "RAG classifier unavailable in this runtime."}), 500
+        dataset_path = get_dataset_path()
+        if not dataset_path:
+            return jsonify({"error": "Dataset unavailable from Google Drive and no local fallback found."}), 500
         classifier = RAGSimilarityClassifier(dataset_path, embedding_path, filepath=chat_file)
         predicted_labels, label_counts = classifier.predict_labels()
 
@@ -289,7 +354,7 @@ def get_recommendation():
     # If recommendation doesn't exist, generate it
     if not os.path.exists(rec_file):
         if os.path.exists(chat_file):
-            counselor_ai.generate_recommendation(chat_file, user_id)
+            get_counselor_ai().generate_recommendation(chat_file, user_id)
         else:
             flash("No chat history found to generate recommendation.", "warning")
             return render_template("recommendations.html", recommendation=None)
@@ -411,7 +476,7 @@ def get_response():
         return jsonify({"error": "No active session."}), 403
 
     try:
-        ai_response = chatbot.chat(user_id, user_input)
+        ai_response = get_chatbot().chat(user_id, user_input)
         if not ai_response:
             return jsonify({"response": "I am here with you. Could you share a little more?"})
         return jsonify({"response": str(ai_response)})
@@ -435,14 +500,15 @@ def end_chat():
 
     try:
         # Save latest file-based history snapshot.
-        previous_chat_history = chatbot.load_chat_history(user_id)
-        chatbot.save_chat_history(user_id, previous_chat_history)
-        chatbot.clear_memory(user_id)
+        bot = get_chatbot()
+        previous_chat_history = bot.load_chat_history(user_id)
+        bot.save_chat_history(user_id, previous_chat_history)
+        bot.clear_memory(user_id)
 
         # Run recommendation pipeline immediately after ending chat.
         chat_file = get_chat_file(user_id)
         if os.path.exists(chat_file):
-            counselor_ai.generate_recommendation(chat_file, user_id)
+            get_counselor_ai().generate_recommendation(chat_file, user_id)
         else:
             print(f"[end_chat] Chat history file not found for user_id={user_id}: {chat_file}")
 
@@ -464,6 +530,10 @@ def logout():
     flash("You have been logged out successfully.", "info")
     return redirect(url_for('login'))
 
-if __name__ == '__main__':
+try:
     init_db()
+except Exception as db_init_error:
+    print(f"[startup] init_db failed: {db_init_error}")
+
+if __name__ == '__main__':
     app.run(debug=True)

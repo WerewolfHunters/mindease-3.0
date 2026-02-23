@@ -74,7 +74,9 @@ Add these variables in Vercel Project Settings:
 - `CHAT_GROQ_API_KEY`
 - `MAIL`
 - `PASS`
+- `FLASK_SECRET_KEY`
 - Optional: `DB_PATH` (defaults to `/tmp/users.db` on Vercel runtime)
+- Optional: `SUICIDE_DATASET_URL` / `SUICIDE_DATASET_FILE_ID` (Google Drive dataset source)
 
 ### 4. Deploy
 
